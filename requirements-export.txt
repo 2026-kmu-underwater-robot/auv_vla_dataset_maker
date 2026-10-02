@@ -1,4 +1,3 @@
-# Keep NumPy compatible with ROS Humble OpenCV and pyarrow 14 wheels.
-numpy==1.26.4
-pandas==2.2.3
-pyarrow==14.0.1
+# Keep export dependencies separate from the ROS Humble runtime. LeRobot 0.6.1
+# provides the public v3 writer API used by export_lerobot and requires Python 3.12+.
+lerobot[dataset]==0.6.1

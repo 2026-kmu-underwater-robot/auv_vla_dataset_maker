@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>kmu26_auv_vla_data_collector</name>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
   <description>Episode-based real-world data collector for the KMU26 U0 VLA policy.</description>
   <maintainer email="kuuve@todo.todo">kuuve</maintainer>
   <license>Apache-2.0</license>

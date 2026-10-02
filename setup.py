@@ -8,7 +8,7 @@ package_name = "kmu26_auv_vla_data_collector"
 
 setup(
     name=package_name,
-    version="0.1.0",
+    version="0.2.0",
     packages=find_packages(exclude=["test"]),
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
@@ -20,7 +20,7 @@ setup(
     zip_safe=True,
     maintainer="kuuve",
     maintainer_email="kuuve@todo.todo",
-    description="Episode-based real-world data collector for the KMU26 U0 VLA policy.",
+    description="LeRobotDataset v3 collector for the KMU26 U0 VLA policy.",
     license="Apache-2.0",
     tests_require=["pytest"],
     entry_points={

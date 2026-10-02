@@ -3,12 +3,8 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-import pytest
 
-from kmu26_auv_vla_data_collector.export_lerobot import export_dataset
-
-pd = pytest.importorskip("pandas")
-pytest.importorskip("pyarrow")
+import kmu26_auv_vla_data_collector.export_lerobot as exporter
 
 
 def _write_frames(directory: Path, count: int, shape: tuple[int, int, int]) -> None:
@@ -18,7 +14,43 @@ def _write_frames(directory: Path, count: int, shape: tuple[int, int, int]) -> N
         assert cv2.imwrite(str(directory / f"frame_{index:06d}.jpg"), image)
 
 
-def test_export_dataset_creates_u0_compatible_layout(tmp_path):
+class _FakeV3Dataset:
+    created = None
+
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        self.episodes = []
+        self.current_episode = []
+        self.finalized = False
+        type(self).created = self
+
+    @classmethod
+    def create(cls, **kwargs):
+        return cls(**kwargs)
+
+    def add_frame(self, frame):
+        self.current_episode.append(frame)
+
+    def save_episode(self):
+        self.episodes.append(self.current_episode)
+        self.current_episode = []
+
+    def finalize(self):
+        self.finalized = True
+        metadata_dir = Path(self.kwargs["root"]) / "meta"
+        metadata_dir.mkdir(parents=True, exist_ok=True)
+        (metadata_dir / "info.json").write_text(
+            json.dumps(
+                {
+                    "codebase_version": "v3.0",
+                    "features": self.kwargs["features"],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+
+def test_export_dataset_uses_lerobot_v3_writer(tmp_path, monkeypatch):
     staging = tmp_path / "staging"
     episode = staging / "episode_000007"
     _write_frames(episode / "frames" / "ego", 3, (8, 12, 3))
@@ -42,16 +74,31 @@ def test_export_dataset_creates_u0_compatible_layout(tmp_path):
                 "frames": 3,
                 "fps": 10.0,
             }
-        )
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        exporter, "_load_lerobot_dataset_class", lambda: _FakeV3Dataset
+    )
+    monkeypatch.setattr(exporter, "_rgb_encoder", lambda: None)
+
+    output = tmp_path / "lerobot_v3"
+    exporter.export_dataset(
+        staging, output, requested_fps=None, repo_id="test/kmu26-auv"
     )
 
-    output = tmp_path / "lerobot"
-    export_dataset(staging, output, requested_fps=None)
+    dataset = _FakeV3Dataset.created
+    assert dataset.finalized
+    assert dataset.kwargs["repo_id"] == "test/kmu26-auv"
+    assert dataset.kwargs["fps"] == 10
+    assert dataset.kwargs["batch_encoding_size"] == 1
+    assert len(dataset.episodes) == 1
+    assert len(dataset.episodes[0]) == 3
+    assert dataset.episodes[0][0]["task"] == "Approach the red buoy."
+    assert dataset.episodes[0][-1]["next.done"].item()
+    assert dataset.episodes[0][0]["observation.images.ego"].shape == (8, 12, 3)
 
-    table = pd.read_parquet(output / "data" / "chunk-000" / "episode_000000.parquet")
-    assert len(table) == 3
-    assert np.stack(table["observation.state"]).shape == (3, 23)
-    assert np.stack(table["action"]).shape == (3, 4)
     info = json.loads((output / "meta" / "info.json").read_text())
+    assert info["codebase_version"] == "v3.0"
     assert info["features"]["observation.images.ego"]["shape"] == [8, 12, 3]
-    assert info["features"]["observation.images.buoy_release"]["shape"] == [6, 10, 3]
+    assert (output / "meta" / "modality.json").is_file()
