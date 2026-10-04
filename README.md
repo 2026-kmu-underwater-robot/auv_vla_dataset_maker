@@ -275,3 +275,71 @@ uses PyAV; it no longer invokes the system `ffmpeg` command. Keep failed/recover
 including them in training; export does not silently filter `success=false`.
 The public `policy_observation(previous_command)` method exposes the same sensor
 contract to an inference adapter without publishing RC or requiring an RC source.
+
+## 데스크톱 대시보드 버전
+
+터미널 명령 대신 GUI에서 패키지를 조작할 수 있는 ROS 2 Humble용 데스크톱
+대시보드입니다. 대시보드 코드와 상세 사용 문서는 `dashboard/` 폴더에 있습니다.
+
+### 제공 기능
+
+- 수집기 실행 및 정상 종료, 이미 실행 중인 수집기에 연결
+- 전방·분리부 카메라 미리보기
+- 센서별 수신 상태, 수신/원본 timestamp age, 수신 주파수 확인
+- 수심 pose.z, 원본 DVL 속도, RC 채널 값 표시
+- 영어 작업 설명 전송과 에피소드 시작·성공 저장·실패 저장·폐기
+- 저장된 에피소드의 결과, 프레임 수, 길이, 작업 설명, 종료 이유 확인
+- 별도 Python 환경을 이용한 LeRobotDataset v3 내보내기와 실행 로그 확인
+
+### 설치 및 실행
+
+ROS 워크스페이스에 이 패키지와 `auv_dvl_a50_msg`, `mavros_msgs`가 설치되어 있어야
+합니다. 기존 빌드 절차를 완료한 뒤 화면이 있는 데스크톱 터미널에서 실행합니다.
+아래 경로는 실제 워크스페이스와 저장소 경로로 바꾸세요.
+
+```bash
+sudo apt install python3-tk
+source /opt/ros/humble/setup.bash
+source /path/to/auv_ros2/install/setup.bash
+cd /path/to/auv_vla_dataset_maker
+python3 -m dashboard
+```
+
+대시보드가 추가된 패키지를 colcon으로 다시 빌드했다면 다음 명령으로도 실행합니다.
+
+```bash
+ros2 run kmu26_auv_vla_data_collector dashboard
+```
+
+### GUI로 에피소드 수집
+
+1. **수집 & 모니터링** 탭에서 설정 YAML과 staging 폴더를 선택합니다.
+   시뮬레이터에서는 **시뮬레이션 시간**을 켜고, 실제 차량에서는 끕니다.
+2. **수집기 실행**을 누르고 기동 로그를 확인한 뒤 **ROS 연결 / 다시 연결**을 누릅니다.
+   이미 실행 중인 수집기를 사용할 때는 연결만 합니다. 연결하면 실제 수집기 설정에서
+   토픽과 staging 경로를 불러옵니다.
+3. 카메라와 센서 상태를 확인하고 영어 작업 설명을 입력한 뒤 **전송**, **시작**을 누릅니다.
+4. 수행이 끝나면 **성공 저장** 또는 **실패 저장**을 선택합니다.
+   학습에 사용하지 않을 현재 에피소드는 **폐기**합니다.
+5. **저장된 에피소드** 탭에서 저장 결과를 확인합니다.
+
+수신 상태 표시는 age 기준이며, 좌표계와 RC 소유권 등 최종 시작 조건은 수집기가
+검증합니다. 상단 통계는 2초마다 저장 폴더를 조회합니다. 임시 수집 폴더는 진행 중인
+수집 또는 중단된 수집의 흔적일 수 있으므로 서비스 응답과 로그도 확인하세요.
+
+### GUI로 LeRobot v3 내보내기
+
+먼저 위 내보내기 절차대로 Python 3.12 가상환경에 `requirements-export.txt`를
+설치합니다. 대시보드 자체는 ROS의 Python 환경에서 실행합니다.
+
+1. 에피소드 수집을 저장/종료하고 **LeRobot v3 내보내기** 탭을 엽니다.
+2. Python 실행 파일에 내보내기 가상환경의 `bin/python`을 지정합니다.
+3. 입력 staging 폴더, 아직 존재하지 않는 새 출력 폴더, `사용자/데이터셋` 형식의 ID를 입력합니다.
+4. **LeRobot v3 변환 시작**을 누르고 로그에서 완료 여부를 확인합니다.
+
+성공·실패 에피소드를 모두 변환하며, 데이터셋 ID는 로컬 식별자입니다.
+자동 업로드하지 않습니다. 변환을 중단하면 부분 출력이 남을 수 있으므로 새 출력 경로로
+다시 실행하세요. **수집기 종료**는 대시보드가 실행한 수집기만 종료하며, 수집 중인
+데이터는 기존 수집기 정책에 따라 실패 에피소드로 보존됩니다.
+
+추가 설명과 검증 방법은 [대시보드 사용 설명서](dashboard/README.md)를 참고하세요.

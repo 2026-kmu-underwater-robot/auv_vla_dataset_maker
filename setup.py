@@ -14,6 +14,7 @@ setup(
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),
         (f"share/{package_name}", ["package.xml", "README.md"]),
         (f"share/{package_name}/launch", glob("launch/*.launch.py")),
+        (f"share/{package_name}/dashboard", ["dashboard/README.md"]),
         (f"share/{package_name}/config", glob("config/*.yaml")),
     ],
     install_requires=["setuptools"],
@@ -25,6 +26,7 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
+            "dashboard = dashboard.app:main",
             "collector = kmu26_auv_vla_data_collector.collector:main",
             "export_lerobot = kmu26_auv_vla_data_collector.export_lerobot:main",
         ],
